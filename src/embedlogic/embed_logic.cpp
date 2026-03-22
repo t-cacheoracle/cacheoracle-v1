@@ -1,8 +1,11 @@
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <regex>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 #include "cache/cluster_cache_no_program.h"
@@ -12,6 +15,42 @@
 #include "embedlogic/embed_logic.h"
 
 using namespace std;
+
+static bool runPythonProgramText(const string &python_program, string &response)
+{
+    if (python_program.empty()) {
+        response.clear();
+        return false;
+    }
+
+    const string &python_file_path = python_program;
+    if (python_file_path.size() < 3 || python_file_path.substr(python_file_path.size() - 3) != ".py") {
+        response = "Invalid python file path: expected .py file";
+        return false;
+    }
+
+    ifstream input(python_file_path);
+    if (!input) {
+        response = "Python file not found or unreadable: " + python_file_path;
+        return false;
+    }
+
+    string command = "python3 \"" + python_file_path + "\" 2>&1";
+    FILE *pipe = popen(command.c_str(), "r");
+    if (pipe == nullptr) {
+        response = "Failed to start python process";
+        return false;
+    }
+
+    response.clear();
+    char buffer[1024];
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        response += buffer;
+    }
+
+    int exit_code = pclose(pipe);
+    return exit_code == 0;
+}
 
 static double cosineSimilarity(const vector<double> &a, const vector<double> &b)
 {
@@ -87,7 +126,7 @@ void insertQEC(QueryEmbeddingCache &q_cache, const ClusterCacheNoProgram &cnp, s
     }
 }
 
-void encodeLogic(const vector<double> &input_embedding)
+void encodeLogic(const vector<double> &input_embedding, string &response)
 {
     //init all three caches
     ClusterCacheNoProgram &cnp = CNP;
@@ -97,6 +136,7 @@ void encodeLogic(const vector<double> &input_embedding)
     ClusterCacheWithProgram::Entry cwp_res = searchCWP(input_embedding, cwp);
     if (!cwp_res.python_program.empty()) {
         //run program --> check sanity --> return response
+        runPythonProgramText(cwp_res.python_program, response);
     }
     else {
         //try to find in qcache
@@ -112,14 +152,17 @@ void encodeLogic(const vector<double> &input_embedding)
 
 }
 
-void start(const string &prompt,
-           string &response)
+void start(const string &prompt, string &response)
 {
-    if (!searchCWP(prompt, response)) {
-        if (!searchQEC(prompt, response)) {
-            newLLMRespone(prompt, response);
-        }
-    }
+    // if (!searchCWP(prompt, response)) {
+    //     if (!searchQEC(prompt, response)) {
+    //         newLLMRespone(prompt, response);
+    //     }
+    // }
+    
+    // PYTHON CODE
+    const vector<double> input_embedding;
+    encodeLogic(input_embedding, response);
 }
 
 bool searchCWP(const string &prompt, string &response) {
@@ -164,7 +207,31 @@ void retQECResponse(const string &prompt, string &response) {
 #ifdef EMBEDLOGIC_STANDALONE
 int main()
 {
+    string response;
+    const string program_path = "embed_input_test.py";
+    {
+        ofstream test_program(program_path);
+        if (!test_program) {
+            cerr << "Failed to create test python file: " << program_path << endl;
+            return 1;
+        }
+        test_program << "print('cacheoracle_test_okfasdfasdfad')\n";
+    }
 
+    const bool ok = runPythonProgramText(program_path, response);
+    remove(program_path.c_str());
+
+    if (!ok) {
+        cerr << "runPythonProgramText failed. Output:\n" << response << endl;
+        return 2;
+    }
+
+    if (response.find("cacheoracle_test_ok") == string::npos) {
+        cerr << "Expected output not found. Actual output:\n" << response << endl;
+        return 3;
+    }
+
+    cout << "runPythonProgramText test passed. Output:\n" << response;
     return 0;
 }
 #endif
