@@ -23,15 +23,15 @@ int main(int argc, char** argv) {
     ::cacheoracle::GenerateRequest request;
     request.set_prompt(prompt);
 
-    ::cacheoracle::GenerateResponse response;
+    ::cacheoracle::Response response;
     grpc::ClientContext context;
 
-    grpc::Status status = stub->GeneratePython(&context, request, &response);
+    grpc::Status status = stub->GenerateResponse(&context, request, &response);
     if (!status.ok()) {
         std::cerr << "RPC failed: " << status.error_message() << std::endl;
         return 1;
     }
 
-    std::cout << response.python_code() << std::endl;
+    std::cout << response.response() << std::endl;
     return 0;
 }

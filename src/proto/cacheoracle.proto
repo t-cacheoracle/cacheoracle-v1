@@ -2,18 +2,14 @@ syntax = "proto3";
 
 package cacheoracle;
 
-// Sample proto for CacheOracle services: code generation only.
-// Generate with protoc to produce C++ gRPC stubs (e.g. cacheoracle.pb.h/.cc and cacheoracle.grpc.pb.h/.cc).
-
-service CodegenService {
-  // Generates Python source from a prompt.
-  rpc GeneratePython (GenerateRequest) returns (GenerateResponse) {}
-}
-
 message GenerateRequest {
   string prompt = 1;
 }
 
-message GenerateResponse {
-  string python_code = 1;
+message Response {
+  string response = 1;
+}
+
+service CodegenService {
+  rpc GenerateResponse (GenerateRequest) returns (Response) {}
 }

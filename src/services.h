@@ -9,8 +9,8 @@ namespace cacheoracle {
 
 class CodegenServiceImpl final : public ::cacheoracle::CodegenService::Service {
 public:
-    grpc::Status GeneratePython(grpc::ServerContext* context, const ::cacheoracle::GenerateRequest* request,
-                                ::cacheoracle::GenerateResponse* response) override;
+    grpc::Status GenerateResponse(grpc::ServerContext* context, const ::cacheoracle::GenerateRequest* request,
+                                ::cacheoracle::Response* response) override;
 };
 
 } // namespace cacheoracle

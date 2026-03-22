@@ -4,13 +4,12 @@
 
 namespace cacheoracle {
 
-grpc::Status CodegenServiceImpl::GeneratePython(grpc::ServerContext* /*context*/, const ::cacheoracle::GenerateRequest* request,
-                                                ::cacheoracle::GenerateResponse* response) {
+grpc::Status CodegenServiceImpl::GenerateResponse(grpc::ServerContext* /*context*/, const ::cacheoracle::GenerateRequest* request,
+                                                ::cacheoracle::Response* response) {
     const std::string &prompt = request->prompt();
-    std::string out = "# Generated Python from prompt:\n# ";
+    std::string out = "# Hello from cacheoracle:\n# ";
     out += prompt;
-    out += "\n\nprint('Hello from codegen')\n";
-    response->set_python_code(out);
+    response->set_response(out);
     return grpc::Status::OK;
 }
 
