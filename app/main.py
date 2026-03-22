@@ -1,5 +1,6 @@
 import os
 from typing import cast
+
 from fastapi import FastAPI
 from uagents_core.contrib.protocols.chat import (
     ChatMessage,
@@ -9,10 +10,10 @@ from uagents_core.envelope import Envelope
 from uagents_core.identity import Identity
 from uagents_core.utils.messages import parse_envelope, send_message_to_agent
 
-name = "FlashAI"
+name = "Chat Protocol Adapter"
 identity = Identity.from_seed(os.environ["AGENT_SEED_PHRASE"], 0)
-readme = "Make agent faster"
-endpoint = "https://cast-stamps-grad-stress.trycloudflare.com/chat"
+readme = "# Chat Protocol Adapter \nExample of how to integrate chat protocol."
+endpoint = "AGENT_EXTERNAL_ENDPOINT"
 
 app = FastAPI()
 
@@ -22,22 +23,10 @@ async def healthcheck():
 
 @app.post("/chat")
 async def handle_message(env: Envelope):
-    try:
-        msg = cast(ChatMessage, parse_envelope(env, ChatMessage))
-        print(f"Received message from {env.sender}: {msg.text()}")
-
-        send_message_to_agent(
-            destination=env.sender,
-            msg=ChatMessage([TextContent("Thanks for the message!")]),
-            sender=identity,
-        )
-
-        return {"status": "success"}
-
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
-
-def fake_grpc_call(input_text: str) -> str:
-    # simulate backend model
-    return f"Processed: {input_text}"
+    msg = cast(ChatMessage, parse_envelope(env, ChatMessage))
+    print(f"Received message from {env.sender}: {msg.text()}")
+    send_message_to_agent(
+        destination=env.sender,
+        msg=ChatMessage([TextContent("Thanks for the message!")]),
+        sender=identity,
+    )
