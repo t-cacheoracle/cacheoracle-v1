@@ -17,6 +17,9 @@
 
 extern llm g_llm;
 
+constexpr size_t CLUSTER_THRESHOLD = 10;
+constexpr int MAX_PROGRAM_GENERATION_TRIES = 3;
+
 using namespace std;
 
 static bool runPythonProgramText(const string &python_program, string &response)
@@ -111,19 +114,50 @@ QueryEmbeddingCacheValue searchQEC(const vector<double> &input_embedding, const 
     return best;
 }
 
+ClusterEmbedding computeCentroid(const QueryEmbeddingList &embeddings) {
+    if (embeddings.empty()) return {};
+    size_t dim = embeddings[0].size();
+    if (dim == 0) return {};
+    ClusterEmbedding centroid(dim, 0.0);
+    for (const auto &e : embeddings)
+        for (size_t i = 0; i < dim; ++i)
+            centroid[i] += e[i];
+    for (auto &v : centroid)
+        v /= static_cast<double>(embeddings.size());
+    return centroid;
+}
+
 void insertQEC(QueryEmbeddingCache &q_cache, const ClusterCacheNoProgram &cnp, string key, string value) {
-    //encode key and valueinto embedding
+    //encode key and value into embedding
     QueryEmbedding key_embedding; //THIS DOES NOT WORK
     ResponseEmbedding value_embedding; //THIS DOES NOT WORK
 
     q_cache.put(key_embedding, value, value_embedding);
     ClusterCacheNoProgram::Entry qec_resp = searchCNP(key_embedding, cnp);
     if (!qec_resp.cluster_embedding.empty()) {
-        //recompute centroid of relevant cnp cluster
-        //check if cnp members are >= threshold 
-        //// > then codegen --> check sanity --> return response
-        //// if we try code again more than 3 times and fail, END
-        // IF < threshold then END
+        // recompute centroid of relevant cnp cluster
+        QueryEmbeddingList qec_resp_query_embeddings = qec_resp.query_embeddings;
+        qec_resp_query_embeddings.push_back(key_embedding);
+        ClusterEmbedding new_cluster_embedding = computeCentroid(qec_resp_query_embeddings);
+
+        if (qec_resp_query_embeddings.size() < CLUSTER_THRESHOLD) {
+            return;
+        }
+
+        // codegen --> check sanity --> return response
+        string program;
+        int tries = 0;
+        while (program.empty() && tries < MAX_PROGRAM_GENERATION_TRIES) {
+            program = generateProgramAndCheckSanity();
+            tries++;
+        }
+        // TODO: delete related CNP and the associated QEC entries
+
+
+        if (bool successProgramGeneration = !program.empty()) {
+            // TODO: make new CWP entry
+
+        }
     } else {
         //recompute centroid of cnp cluster if totally new which ti is, new centroid
         //new method to add to existing cnp cluster    
