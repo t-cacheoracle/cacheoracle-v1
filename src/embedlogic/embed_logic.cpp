@@ -115,6 +115,7 @@ void insertQEC(QueryEmbeddingCache &q_cache, const ClusterCacheNoProgram &cnp, s
     //encode key and valueinto embedding
     QueryEmbedding key_embedding; //THIS DOES NOT WORK
     ResponseEmbedding value_embedding; //THIS DOES NOT WORK
+
     q_cache.put(key_embedding, value, value_embedding);
     ClusterCacheNoProgram::Entry qec_resp = searchCNP(key_embedding, cnp);
     if (!qec_resp.cluster_embedding.empty()) {
@@ -129,8 +130,6 @@ void insertQEC(QueryEmbeddingCache &q_cache, const ClusterCacheNoProgram &cnp, s
     }
 }
 
-void insertCNP();
-
 void encodeLogic(const vector<double> &input_embedding, const string &prompt, string &response)
 {
     //init all three caches
@@ -141,7 +140,6 @@ void encodeLogic(const vector<double> &input_embedding, const string &prompt, st
     ClusterCacheWithProgram::Entry cwp_res = searchCWP(input_embedding, cwp);
     if (!cwp_res.python_program.empty()) {
         runPythonProgramText(cwp_res.python_program, response);
-
         // TODO: implement sanity check (optional)
     }
     else {

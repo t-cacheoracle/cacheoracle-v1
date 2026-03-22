@@ -62,6 +62,7 @@ add_executable(cacheoracle
     server.cpp
     services.cpp
     embedlogic/embed_logic.cpp
+        embedlogic/transformer.cpp
 )
 
 target_include_directories(cacheoracle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${GENERATED_DIR})
