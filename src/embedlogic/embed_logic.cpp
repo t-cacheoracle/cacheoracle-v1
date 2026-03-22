@@ -13,6 +13,9 @@
 #include "cache/cache_globals.h"
 #include "cache/query_embedding_cache.h"
 #include "embedlogic/embed_logic.h"
+#include "codegen/llm.h"
+
+extern llm g_llm;
 
 using namespace std;
 
@@ -126,7 +129,9 @@ void insertQEC(QueryEmbeddingCache &q_cache, const ClusterCacheNoProgram &cnp, s
     }
 }
 
-void encodeLogic(const vector<double> &input_embedding, string &response)
+void insertCNP();
+
+void encodeLogic(const vector<double> &input_embedding, const string &prompt, string &response)
 {
     //init all three caches
     ClusterCacheNoProgram &cnp = CNP;
@@ -135,28 +140,19 @@ void encodeLogic(const vector<double> &input_embedding, string &response)
 
     ClusterCacheWithProgram::Entry cwp_res = searchCWP(input_embedding, cwp);
     if (!cwp_res.python_program.empty()) {
-        //run program --> check sanity --> return response
         runPythonProgramText(cwp_res.python_program, response);
 
-        // TODO: implement sanity check
-        // bool pass_sanity_check;
-        // if (!pass_sanity_check) {
-        //     // TODO: call LLM
-        //
-        // }
+        // TODO: implement sanity check (optional)
     }
     else {
         //try to find in qcache
         QueryEmbeddingCacheValue qec_resp = searchQEC(input_embedding, q_cache);
         if (!qec_resp.response_text.empty()) { // hit qcache
             response = qec_resp.response_text;
-            // TODO: update message history
-
+            // TODO: update message history (optional)
         } else { // miss qcache
-            //CALL LLM --> take response
-            //TO DO: logic for inserting response into qcache and cnp
-
-
+            response = g_llm.generate_response(prompt);
+            insertQEC(q_cache, cnp, prompt, response); // handle group logic too
         }
     }
 
@@ -173,7 +169,7 @@ void start(const string &prompt, string &response)
     // PYTHON CODE, using bash
 
     const vector<double> input_embedding;
-    encodeLogic(input_embedding, response);
+    encodeLogic(input_embedding, prompt, response);
 }
 
 bool searchCWP(const string &prompt, string &response) {
