@@ -5,10 +5,10 @@ import sys
 from grpc_client import generate_response
 
 agent = Agent(
-    name="FalshAI",
+    name="FlashAI",
     port=8000,
-    seed="Produhacks2026",
-    endpoint=["http://YOUR_IP:8000/submit"],
+    seed=os.environ["AGENT_SEED_PHRASE"],
+    endpoint=["https://truegradeofficial.com/submit"],
 )
 
 
