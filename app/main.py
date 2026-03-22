@@ -11,7 +11,7 @@ from uagents_core.utils.messages import parse_envelope, send_message_to_agent
 
 name = "FlashAI"
 identity = Identity.from_seed(os.environ["AGENT_SEED_PHRASE"], 0)
-readme = "# Chat Protocol Adapter \nExample of how to integrate chat protocol."
+readme = "Make agent faster"
 endpoint = "https://cast-stamps-grad-stress.trycloudflare.com/chat"
 
 app = FastAPI()
