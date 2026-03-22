@@ -14,7 +14,6 @@
 #include "cache/cache_globals.h"
 #include "cache/query_embedding_cache.h"
 #include "embedlogic/embed_logic.h"
-#include "codegen/codegen.h"
 #include "codegen/llm.h"
 
 extern llm g_llm;
@@ -205,7 +204,7 @@ void insertQEC(QueryEmbeddingCache &q_cache, ClusterCacheNoProgram &cnp, string 
         }
 
         // codegen to generate program, have max tries
-        string codegen_input = generate_codegen_input(q_cache, qec_resp,);
+        string codegen_input = generate_codegen_input(q_cache, qec_resp);
         string program;
         string program_response;
         int tries = 0;
