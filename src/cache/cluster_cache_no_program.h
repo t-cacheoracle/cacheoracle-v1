@@ -27,6 +27,7 @@ public:
 	bool get(const ClusterEmbedding& cluster_embedding,
 			 QueryEmbeddingList* out_query_embeddings);
 
+	void erase(const ClusterEmbedding& cluster_embedding);
 	std::vector<Entry> getEntries() const;
 	std::size_t size() const;
 

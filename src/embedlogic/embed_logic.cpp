@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <regex>
+#include <sstream>
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -21,6 +22,43 @@ constexpr size_t CLUSTER_THRESHOLD = 10;
 constexpr int MAX_PROGRAM_GENERATION_TRIES = 3;
 
 using namespace std;
+
+static bool runEncoder(const string &text, vector<double> &embedding)
+{
+    string escaped = text;
+    // Escape double quotes in the query so the shell argument stays intact
+    size_t pos = 0;
+    while ((pos = escaped.find('"', pos)) != string::npos) {
+        escaped.replace(pos, 1, "\\\"");
+        pos += 2;
+    }
+
+    string command = "python3 src/embedlogic/encoder.py \"" + escaped + "\" 2>&1";
+    FILE *pipe = popen(command.c_str(), "r");
+    if (!pipe) return false;
+
+    string output;
+    char buffer[4096];
+    while (fgets(buffer, sizeof(buffer), pipe))
+        output += buffer;
+    int exit_code = pclose(pipe);
+    if (exit_code != 0) return false;
+
+    // Parse Python list literal: [0.123, -0.456, ...]
+    embedding.clear();
+    size_t start = output.find('[');
+    size_t end   = output.rfind(']');
+    if (start == string::npos || end == string::npos) return false;
+
+    string inner = output.substr(start + 1, end - start - 1);
+    stringstream ss(inner);
+    string token;
+    while (getline(ss, token, ',')) {
+        try { embedding.push_back(stod(token)); }
+        catch (...) { return false; }
+    }
+    return !embedding.empty();
+}
 
 static bool runPythonProgramText(const string &python_program, string &response)
 {
@@ -127,7 +165,7 @@ ClusterEmbedding computeCentroid(const QueryEmbeddingList &embeddings) {
     return centroid;
 }
 
-void insertQEC(QueryEmbeddingCache &q_cache, const ClusterCacheNoProgram &cnp, string key, string value) {
+void insertQEC(QueryEmbeddingCache &q_cache, ClusterCacheNoProgram &cnp, string key, string value) {
     //encode key and value into embedding
     QueryEmbedding key_embedding; //THIS DOES NOT WORK
     ResponseEmbedding value_embedding; //THIS DOES NOT WORK
@@ -151,8 +189,10 @@ void insertQEC(QueryEmbeddingCache &q_cache, const ClusterCacheNoProgram &cnp, s
             program = generateProgramAndCheckSanity();
             tries++;
         }
-        // TODO: delete related CNP and the associated QEC entries
-
+        // delete related CNP cluster and its associated QEC entries
+        for (const auto& query_emb : qec_resp.query_embeddings)
+            q_cache.erase(query_emb);
+        cnp.erase(qec_resp.cluster_embedding);
 
         if (bool successProgramGeneration = !program.empty()) {
             // TODO: make new CWP entry
@@ -220,7 +260,7 @@ bool searchQEC(const string &prompt, string &response) {
         retQECResponse(prompt, response);
         return true;
     } else {
-         return false;
+        return false;
     }
 }
 
@@ -243,7 +283,6 @@ void retQECResponse(const string &prompt, string &response) {
     response = "QEC_response_for: " + prompt;
 }
 
-#ifdef EMBEDLOGIC_STANDALONE
 int main()
 {
     string response;

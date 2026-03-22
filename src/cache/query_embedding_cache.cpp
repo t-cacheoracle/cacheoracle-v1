@@ -81,6 +81,17 @@ bool QueryEmbeddingCache::get(const QueryEmbedding& query_embedding,
     return false;
 }
 
+void QueryEmbeddingCache::erase(const QueryEmbedding& query_embedding) {
+    for (Node* node = left->next; node != right; node = node->next) {
+        if (node->key == query_embedding) {
+            remove(node);
+            delete node;
+            --current_size;
+            return;
+        }
+    }
+}
+
 std::size_t QueryEmbeddingCache::size() const {
     return current_size;
 }
