@@ -14,6 +14,7 @@
 #include "cache/cache_globals.h"
 #include "cache/query_embedding_cache.h"
 #include "embedlogic/embed_logic.h"
+#include "codegen/codegen.h"
 #include "codegen/llm.h"
 
 extern llm g_llm;
@@ -171,6 +172,18 @@ ClusterEmbedding computeCentroid(const QueryEmbeddingList &embeddings) {
     return centroid;
 }
 
+std::string generate_codegen_input(QueryEmbeddingCache &q_cache, ClusterCacheNoProgram::Entry qec_resp) {
+    string codegen_input = "";
+    for (const auto &query_emb : qec_resp.query_embeddings) {
+        QueryEmbeddingCacheValue qec_val;
+        if (q_cache.get(query_emb, qec_val)) {
+            codegen_input += "question:" + qec_val.question_text + "\n" + "answer:" + qec_val.response_text + "\n";
+        }
+    }
+
+    return codegen_input;
+}
+
 void insertQEC(QueryEmbeddingCache &q_cache, ClusterCacheNoProgram &cnp, string key, string value) {
 
     QueryEmbedding key_embedding;
@@ -178,7 +191,7 @@ void insertQEC(QueryEmbeddingCache &q_cache, ClusterCacheNoProgram &cnp, string 
     ResponseEmbedding value_embedding;
     if (!runEncoder(value, value_embedding)) return;
 
-    q_cache.put(key_embedding, value, value_embedding);
+    q_cache.put(key_embedding, key, value, value_embedding);
     ClusterCacheNoProgram::Entry qec_resp = searchCNP(key_embedding, cnp);
 
     if (bool is_in_cluster = !qec_resp.cluster_embedding.empty()) {
@@ -192,10 +205,15 @@ void insertQEC(QueryEmbeddingCache &q_cache, ClusterCacheNoProgram &cnp, string 
         }
 
         // codegen to generate program, have max tries
+        string codegen_input = generate_codegen_input(q_cache, qec_resp,);
         string program;
+        string program_response;
         int tries = 0;
         while (program.empty() && tries < MAX_PROGRAM_GENERATION_TRIES) {
-            program = generateProgramAndCheckSanity();
+            program = g_llm.generate_codegen_response(codegen_input);
+            if (bool fail_sanity_check = !runPythonProgramText(program, program_response)) {
+                program = "";
+            }
             tries++;
         }
 
@@ -204,12 +222,9 @@ void insertQEC(QueryEmbeddingCache &q_cache, ClusterCacheNoProgram &cnp, string 
             q_cache.erase(query_emb);
         cnp.erase(qec_resp.cluster_embedding);
 
-        if (bool successProgramGeneration = !program.empty()) {
-            // TODO: get program response and encode it as embeddings
-            string program_response;
+        if (!program.empty()) {
             vector<double> program_response_embedding;
-            if (runPythonProgramText(program, program_response) &&
-                runEncoder(program_response, program_response_embedding)) {
+            if (runEncoder(program_response, program_response_embedding)) {
                 CWP.put(new_cluster_embedding, program, program_response_embedding);
             }
         }

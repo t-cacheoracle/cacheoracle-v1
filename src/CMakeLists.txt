@@ -90,7 +90,8 @@ add_executable(cluster_cache_tests
 target_include_directories(cluster_cache_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(cluster_cache_tests PRIVATE cacheoracle_cache)
 
-add_executable(llm_test codegen/llm.cpp)
+add_executable(llm_test codegen/llm.cpp
+)
 target_link_libraries(llm_test CURL::libcurl)
 
 add_executable(query_embedding_cache_tests

@@ -14,6 +14,8 @@ public:
     llm();
     ~llm();
     std::string generate_response(const std::string& user_query);
+    std::string generate_codegen_response(const std::string& user_query);
+
 };
 
 
