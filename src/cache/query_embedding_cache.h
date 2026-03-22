@@ -47,6 +47,9 @@ public:
 			 const ResponseEmbedding& response_embedding);
 
 	bool get(const QueryEmbedding& query_embedding, QueryEmbeddingCacheValue& out_value);
+
+	// Return a copy of all entries as (key, value) pairs in LRU order (most-recent last).
+	std::vector<std::pair<QueryEmbedding, QueryEmbeddingCacheValue>> getEntries() const;
 	std::size_t size() const;
 };
 

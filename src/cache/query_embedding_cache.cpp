@@ -84,3 +84,11 @@ bool QueryEmbeddingCache::get(const QueryEmbedding& query_embedding,
 std::size_t QueryEmbeddingCache::size() const {
     return current_size;
 }
+
+std::vector<std::pair<QueryEmbedding, QueryEmbeddingCacheValue>> QueryEmbeddingCache::getEntries() const {
+    std::vector<std::pair<QueryEmbedding, QueryEmbeddingCacheValue>> out;
+    for (Node* node = left->next; node != right; node = node->next) {
+        out.emplace_back(node->key, node->value);
+    }
+    return out;
+}
