@@ -22,10 +22,28 @@ async def healthcheck():
 
 @app.post("/chat")
 async def handle_message(env: Envelope):
-    msg = cast(ChatMessage, parse_envelope(env, ChatMessage))
-    print(f"Received message from {env.sender}: {msg.text()}")
-    send_message_to_agent(
-        destination=env.sender,
-        msg=ChatMessage([TextContent("Thanks for the message!")]),
-        sender=identity,
-    )
+    try:
+        msg = cast(ChatMessage, parse_envelope(env, ChatMessage))
+        user_input = msg.text()
+
+        print(f"Received: {user_input}")
+
+        # ---- simulate gRPC call ----
+        grpc_response = fake_grpc_call(user_input)
+
+        # ---- send response back ----
+        send_message_to_agent(
+            destination=env.sender,
+            msg=ChatMessage([TextContent(grpc_response)]),
+            sender=identity,
+        )
+
+        return {"status": "success"}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+def fake_grpc_call(input_text: str) -> str:
+    # simulate backend model
+    return f"Processed: {input_text}"
