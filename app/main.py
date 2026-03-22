@@ -1,52 +1,46 @@
-import os
-from typing import cast
+from uagents import Agent, Context, Protocol, Model
+import random
+from uagents import Field
+import sys
+from grpc_client import generate_response
 
-import grpc
-import cacheoracle_pb2
-import cacheoracle_pb2_grpc
-
-from fastapi import FastAPI
-from uagents_core.contrib.protocols.chat import (
-    ChatMessage,
-    TextContent,
+agent = Agent(
+    name="FalshAI",
+    port=8000,
+    seed="Produhacks2026",
+    endpoint=["http://YOUR_IP:8000/submit"],
 )
-from uagents_core.envelope import Envelope
-from uagents_core.identity import Identity
-from uagents_core.utils.messages import parse_envelope, send_message_to_agent
 
-name = "FlashAI"
-from dotenv import load_dotenv
 
-load_dotenv()
-identity = Identity.from_seed(os.getenv("AGENT_SEED_PHRASE"), 0)
+@agent.on_event("startup")
+async def hi(ctx: Context):
+    ctx.logger.info(agent.address)
 
-app = FastAPI()
 
-@app.get("/status")
-async def healthcheck():
-    return {"status": "OK - Agent is running"}
+class Request(Model):
+    prompt: str = Field(description="Prompt for the gRPC service")
 
-@app.post("/chat")
-async def handle_message(env: Envelope):
-    msg = cast(ChatMessage, parse_envelope(env, ChatMessage))
-    user_text = msg.text()
+class Response(Model):
+    text: str = Field(description="Response from gRPC service")
 
-    print(f"Received message from {env.sender}: {user_text}")
 
-    # call (gRPC)
-    backend_reply = call_backend(user_text)
 
-    send_message_to_agent(
-        destination=env.sender,
-        msg=ChatMessage([TextContent(backend_reply)]),
-        sender=identity,
+grpc_protocol = Protocol("GRPCService")
+
+
+@grpc_protocol.on_message(model=Request, replies={Response})
+async def handle_grpc_call(ctx: Context, sender: str, msg: Request):
+    try:
+        result = generate_response(msg.prompt)
+        message = f"gRPC Response: {result}"
+    except Exception as e:
+        message = f"gRPC Error: {str(e)}"
+    
+    await ctx.send(
+        sender, Response(text=message)
     )
 
-def call_backend(user_input: str) -> str:
-    with grpc.insecure_channel("localhost:50051") as channel:
-        stub = cacheoracle_pb2_grpc.CodegenServiceStub(channel)
 
-        request = cacheoracle_pb2.GenerateRequest(prompt=user_input)
-        response = stub.GeneratePython(request)
+agent.include(grpc_protocol, publish_manifest=True)
 
-        return response.python_code
+agent.run()

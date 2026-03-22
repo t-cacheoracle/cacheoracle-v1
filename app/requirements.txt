@@ -1,4 +1,2 @@
-fastapi
-uvicorn
-uagents-core
-dotenv
+uagents
+grpcio
