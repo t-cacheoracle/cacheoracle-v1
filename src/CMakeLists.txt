@@ -24,8 +24,7 @@ endif()
 
 set(GENERATED_PB_CC ${GENERATED_DIR}/cacheoracle.pb.cc)
 set(GENERATED_PB_H  ${GENERATED_DIR}/cacheoracle.pb.h)
-set(GENERATED_GRPC_CC ${GENERATED_DIR}/cacheoracle.grpc.pb.cc
-        codegen/env_loader.h)
+set(GENERATED_GRPC_CC ${GENERATED_DIR}/cacheoracle.grpc.pb.cc)
 set(GENERATED_GRPC_H  ${GENERATED_DIR}/cacheoracle.grpc.pb.h)
 
 add_custom_command(
@@ -62,11 +61,12 @@ add_executable(cacheoracle
     server.cpp
     services.cpp
     embedlogic/embed_logic.cpp
-        embedlogic/transformer.cpp
+    embedlogic/transformer.cpp
+    codegen/llm.cpp
 )
 
 target_include_directories(cacheoracle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${GENERATED_DIR})
-target_link_libraries(cacheoracle PRIVATE cacheoracle_proto cacheoracle_cache)
+target_link_libraries(cacheoracle PRIVATE cacheoracle_proto cacheoracle_cache CURL::libcurl)
 
 add_executable(cacheoracle_client
     client.cpp
@@ -77,10 +77,11 @@ target_link_libraries(cacheoracle_client PRIVATE cacheoracle_proto cacheoracle_c
 
 add_executable(cacheoracle_embedlogic
     embedlogic/embed_logic.cpp
+    codegen/llm.cpp
 )
 
 target_include_directories(cacheoracle_embedlogic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(cacheoracle_embedlogic PRIVATE cacheoracle_cache)
+target_link_libraries(cacheoracle_embedlogic PRIVATE cacheoracle_cache CURL::libcurl)
 target_compile_definitions(cacheoracle_embedlogic PRIVATE EMBEDLOGIC_STANDALONE)
 
 add_executable(cluster_cache_tests
@@ -92,6 +93,7 @@ target_link_libraries(cluster_cache_tests PRIVATE cacheoracle_cache)
 
 add_executable(llm_test codegen/llm.cpp
 )
+target_compile_definitions(llm_test PRIVATE LLM_TEST_MAIN)
 target_link_libraries(llm_test CURL::libcurl)
 
 add_executable(query_embedding_cache_tests

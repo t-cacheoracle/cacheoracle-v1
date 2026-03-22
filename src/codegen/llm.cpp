@@ -84,6 +84,7 @@ std::string llm::generate_codegen_response(const std::string& user_query) {
 }
 
 
+#ifdef LLM_TEST_MAIN
 int main() {
     llm llm;
     //std::cout << llm.generate_response("What is the largest planet in the solar system?") << std::endl;
@@ -109,3 +110,4 @@ Input: Buy dress from Amazon)";
     std::cout << llm.generate_codegen_response(prompt) << std::endl;
     return 0;
 }
+#endif // LLM_TEST_MAIN

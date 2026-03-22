@@ -20,4 +20,6 @@ public:
 
 
 
+extern llm g_llm;
+
 #endif //LLM_H

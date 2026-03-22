@@ -16,8 +16,6 @@
 #include "embedlogic/embed_logic.h"
 #include "codegen/llm.h"
 
-extern llm g_llm;
-
 constexpr size_t CLUSTER_THRESHOLD = 10;
 constexpr int MAX_PROGRAM_GENERATION_TRIES = 3;
 
@@ -39,21 +37,28 @@ static bool runEncoder(const string &text, vector<double> &embedding)
         pos += 2;
     }
 
-    string command = "python3 src/embedlogic/encoder.py \"" + escaped + "\" 2>&1";
+    string command = "python3 \"" + ENCODER_PATH + "\" \"" + escaped + "\" 2>&1";
+    std::cout << "[runEncoder] command: " << command << "\n";
     FILE *pipe = popen(command.c_str(), "r");
-    if (!pipe) return false;
+    if (!pipe) {
+        std::cout << "[runEncoder] popen failed\n";
+        return false;
+    }
 
     string output;
     char buffer[4096];
     while (fgets(buffer, sizeof(buffer), pipe))
         output += buffer;
     int exit_code = pclose(pipe);
-    if (exit_code != 0) return false;
+    std::cout << "[runEncoder] exit_code: " << exit_code << "\n";
+    std::cout << "[runEncoder] output: " << output << "\n";
 
     // Parse Python list literal: [0.123, -0.456, ...]
+    // Find the first '[' followed by a digit or '-' to skip progress bar brackets
     embedding.clear();
     size_t start = output.find('[');
-    size_t end   = output.rfind(']');
+    size_t end = output.rfind(']');
+    std::cout << "[runEncoder] bracket start=" << start << " end=" << end << "\n";
     if (start == string::npos || end == string::npos) return false;
 
     string inner = output.substr(start + 1, end - start - 1);
@@ -61,8 +66,12 @@ static bool runEncoder(const string &text, vector<double> &embedding)
     string token;
     while (getline(ss, token, ',')) {
         try { embedding.push_back(stod(token)); }
-        catch (...) { return false; }
+        catch (...) {
+            std::cout << "[runEncoder] failed to parse token: '" << token << "'\n";
+            return false;
+        }
     }
+    std::cout << "[runEncoder] parsed " << embedding.size() << " values\n";
     return !embedding.empty();
 }
 
@@ -269,16 +278,25 @@ void start(const string &prompt, string &response)
     // }
     
     // PYTHON CODE, using bash
+    std::vector<double> input_embedding;
+    runEncoder(prompt, input_embedding);
 
-    vector<double> input_embedding;
-    if (!runEncoder(prompt, input_embedding)) {
-        response = "Failed to encode prompt";
-        return;
+    std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+    std::cout << "input_embedding size after runEncoder: " << input_embedding.size() << "\n";
+    std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+
+    std::cout << "input_embedding (" << input_embedding.size() << "): [";
+    for (size_t i = 0; i < input_embedding.size(); ++i) {
+        if (i) std::cout << ", ";
+        std::cout << input_embedding[i];
     }
+    std::cout << "]\n";
     encodeLogic(input_embedding, prompt, response);
 }
 
 #ifdef EMBEDLOGIC_STANDALONE
+
+llm g_llm;
 
 string generateProgramAndCheckSanity() { return ""; }
 
