@@ -13,7 +13,7 @@ class llm {
 public:
     llm();
     ~llm();
-    std::string generate_response(nlohmann::json& message_history);
+    std::string generate_response(const std::string& user_query);
 };
 
 

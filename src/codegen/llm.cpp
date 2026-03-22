@@ -18,33 +18,26 @@ llm::llm() {
 
 llm::~llm() = default;
 
-std::string llm::generate_response(nlohmann::json &message_history) {
+std::string llm::generate_response(const std::string& user_query) {
+    nlohmann::json messages = nlohmann::json::array();
+    messages.push_back({{"role", "user"}, {"content", user_query}});
+
     nlohmann::json request;
     request["model"] = "gpt-5.4-nano";
-    request["messages"] = message_history;
+    request["messages"] = messages;
     request["max_completion_tokens"] = 1000;
     request["temperature"] = 0.7;
 
     nlohmann::json chat = openai::chat().create(request);
     std::string llm_response = chat["choices"][0]["message"]["content"];
 
-    message_history.push_back({
-        {"role", "assistant"},
-        {"content", llm_response}
-    });
+    // todo: append to message history
 
     return llm_response;
 }
 
 int main() {
     llm llm;
-    nlohmann::json sample_message_history = {
-        {
-            {"role", "user"},
-            {"content", "What is the largest planet in the solar system?"}
-        }
-    };
-
-    std::cout << llm.generate_response(sample_message_history) << std::endl;
+    std::cout << llm.generate_response("What is the largest planet in the solar system?") << std::endl;
     return 0;
 }

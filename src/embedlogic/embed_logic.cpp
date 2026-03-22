@@ -137,15 +137,25 @@ void encodeLogic(const vector<double> &input_embedding, string &response)
     if (!cwp_res.python_program.empty()) {
         //run program --> check sanity --> return response
         runPythonProgramText(cwp_res.python_program, response);
+
+        // TODO: implement sanity check
+        // bool pass_sanity_check;
+        // if (!pass_sanity_check) {
+        //     // TODO: call LLM
+        //
+        // }
     }
     else {
         //try to find in qcache
-        QueryEmbeddingCacheValue qec_resp = searchQEC(input_embedding, q_cache);  
-        if (qec_resp.response_text.empty()) {
-            //return response from qcache and end
-        } else{
+        QueryEmbeddingCacheValue qec_resp = searchQEC(input_embedding, q_cache);
+        if (!qec_resp.response_text.empty()) { // hit qcache
+            response = qec_resp.response_text;
+            // TODO: update message history
+
+        } else { // miss qcache
             //CALL LLM --> take response
             //TO DO: logic for inserting response into qcache and cnp
+
 
         }
     }
@@ -160,7 +170,8 @@ void start(const string &prompt, string &response)
     //     }
     // }
     
-    // PYTHON CODE
+    // PYTHON CODE, using bash
+
     const vector<double> input_embedding;
     encodeLogic(input_embedding, response);
 }
