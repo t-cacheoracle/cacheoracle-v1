@@ -6,6 +6,7 @@ cmake_install.cmake
 Makefile
 /app/venv/
 /app/__pycache__/
+.idea/
 
 # Editor/IDE
 .vscode/

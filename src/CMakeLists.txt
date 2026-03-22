@@ -1,10 +1,13 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.31)
 project(cacheoracle CXX)
+
+set(CMAKE_CXX_STANDARD 17)
 
 enable_testing()
 
 find_package(gRPC CONFIG REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
+find_package(CURL REQUIRED)
 
 set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/proto/cacheoracle.proto)
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
@@ -21,7 +24,8 @@ endif()
 
 set(GENERATED_PB_CC ${GENERATED_DIR}/cacheoracle.pb.cc)
 set(GENERATED_PB_H  ${GENERATED_DIR}/cacheoracle.pb.h)
-set(GENERATED_GRPC_CC ${GENERATED_DIR}/cacheoracle.grpc.pb.cc)
+set(GENERATED_GRPC_CC ${GENERATED_DIR}/cacheoracle.grpc.pb.cc
+        codegen/env_loader.h)
 set(GENERATED_GRPC_H  ${GENERATED_DIR}/cacheoracle.grpc.pb.h)
 
 add_custom_command(
@@ -84,6 +88,9 @@ add_executable(cluster_cache_tests
 
 target_include_directories(cluster_cache_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(cluster_cache_tests PRIVATE cacheoracle_cache)
+
+add_executable(llm_test codegen/llm.cpp)
+target_link_libraries(llm_test CURL::libcurl)
 
 add_executable(query_embedding_cache_tests
     cache/test_query_embedding_cache.cpp
