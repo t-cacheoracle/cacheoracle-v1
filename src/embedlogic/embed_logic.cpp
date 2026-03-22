@@ -59,22 +59,22 @@ QueryEmbeddingCacheValue searchQEC(const vector<double> &input_embedding, const 
     QueryEmbeddingCacheValue best{{}, {}};
     double best_sim = -1.0;
     for (const auto &e : q_cache.getEntries()) {
-        double s = cosineSimilarity(input_embedding, e.key);
+        double s = cosineSimilarity(input_embedding, e.first);
         if (s > best_sim) {
             best_sim = s;
-            best = e.Node->value;
+            best = e.second;
         }
     }
     return best;
 }
 
-void insertQEC(const QueryEmbeddingCache &q_cache, const ClusterCacheNoProgram &cnp, string key, string value) {
+void insertQEC(QueryEmbeddingCache &q_cache, const ClusterCacheNoProgram &cnp, string key, string value) {
     //encode key and valueinto embedding
-    QueryEmbedding key_embedding = nullptr; //THIS DOES NOT WORK
-    ResponseEmbedding value_embedding = nullptr; //THIS DOES NOT WORK
+    QueryEmbedding key_embedding; //THIS DOES NOT WORK
+    ResponseEmbedding value_embedding; //THIS DOES NOT WORK
     q_cache.put(key_embedding, value, value_embedding);
     ClusterCacheNoProgram::Entry qec_resp = searchCNP(key_embedding, cnp);
-    if (qec_resp != nullptr) {\
+    if (!qec_resp.cluster_embedding.empty()) {
         //recompute centroid of relevant cnp cluster
         //check if cnp members are >= threshold 
         //// > then codegen --> check sanity --> return response
@@ -100,7 +100,7 @@ void encodeLogic(const vector<double> &input_embedding)
     else {
         //try to find in qcache
         QueryEmbeddingCacheValue qec_resp = searchQEC(input_embedding, q_cache);  
-        if (qec_resp != nullptr) {
+        if (qec_resp.response_text.empty()) {
             //return response from qcache and end
         } else{
             //CALL LLM --> take response
