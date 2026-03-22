@@ -9,6 +9,7 @@
 #include "cache/cluster_cache_with_program.h"
 #include "cache/cache_globals.h"
 #include "cache/query_embedding_cache.h"
+#include "embedlogic/embed_logic.h"
 
 using namespace std;
 
@@ -110,3 +111,60 @@ void encodeLogic(const vector<double> &input_embedding)
     }
 
 }
+
+void start(const string &prompt,
+           string &response)
+{
+    if (!searchCWP(prompt, response)) {
+        if (!searchQEC(prompt, response)) {
+            newLLMRespone(prompt, response);
+        }
+    }
+}
+
+bool searchCWP(const string &prompt, string &response) {
+    bool valid = false;
+    if (valid) {
+        runProgram(prompt, response);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool searchQEC(const string &prompt, string &response) {
+    bool valid = false;
+    if (valid) {
+        retQECResponse(prompt, response);
+        return true;
+    } else {
+         return false;
+    }
+}
+
+bool newLLMRespone(const string &prompt, string &response) {
+    // LLM call placeholder
+    string out = "LLM_generated_response";
+    response = out;
+    return true;
+}
+
+// Simple stub: execute the program or simulate running stored program
+void runProgram(const string &prompt, string &response) {
+    // Placeholder implementation — integrate real program execution here
+    response = "Program executed for prompt: " + prompt;
+}
+
+// Simple stub: return a response from the Query Embedding Cache (QEC)
+void retQECResponse(const string &prompt, string &response) {
+    // Placeholder implementation — replace with actual QEC retrieval logic
+    response = "QEC_response_for: " + prompt;
+}
+
+#ifdef EMBEDLOGIC_STANDALONE
+int main()
+{
+
+    return 0;
+}
+#endif
