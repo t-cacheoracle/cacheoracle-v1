@@ -23,6 +23,12 @@ constexpr int MAX_PROGRAM_GENERATION_TRIES = 3;
 
 using namespace std;
 
+static const string ENCODER_PATH = []() {
+    string src_file = __FILE__;  // absolute path to embed_logic.cpp
+    size_t last_slash = src_file.rfind('/');
+    return src_file.substr(0, last_slash + 1) + "encoder.py";
+}();
+
 static bool runEncoder(const string &text, vector<double> &embedding)
 {
     string escaped = text;
@@ -166,13 +172,16 @@ ClusterEmbedding computeCentroid(const QueryEmbeddingList &embeddings) {
 }
 
 void insertQEC(QueryEmbeddingCache &q_cache, ClusterCacheNoProgram &cnp, string key, string value) {
-    //encode key and value into embedding
-    QueryEmbedding key_embedding; //THIS DOES NOT WORK
-    ResponseEmbedding value_embedding; //THIS DOES NOT WORK
+
+    QueryEmbedding key_embedding;
+    if (!runEncoder(key, key_embedding)) return;
+    ResponseEmbedding value_embedding;
+    if (!runEncoder(value, value_embedding)) return;
 
     q_cache.put(key_embedding, value, value_embedding);
     ClusterCacheNoProgram::Entry qec_resp = searchCNP(key_embedding, cnp);
-    if (!qec_resp.cluster_embedding.empty()) {
+
+    if (bool is_in_cluster = !qec_resp.cluster_embedding.empty()) {
         // recompute centroid of relevant cnp cluster
         QueryEmbeddingList qec_resp_query_embeddings = qec_resp.query_embeddings;
         qec_resp_query_embeddings.push_back(key_embedding);
@@ -182,25 +191,32 @@ void insertQEC(QueryEmbeddingCache &q_cache, ClusterCacheNoProgram &cnp, string 
             return;
         }
 
-        // codegen --> check sanity --> return response
+        // codegen to generate program, have max tries
         string program;
         int tries = 0;
         while (program.empty() && tries < MAX_PROGRAM_GENERATION_TRIES) {
             program = generateProgramAndCheckSanity();
             tries++;
         }
+
         // delete related CNP cluster and its associated QEC entries
         for (const auto& query_emb : qec_resp.query_embeddings)
             q_cache.erase(query_emb);
         cnp.erase(qec_resp.cluster_embedding);
 
         if (bool successProgramGeneration = !program.empty()) {
-            // TODO: make new CWP entry
-
+            // TODO: get program response and encode it as embeddings
+            string program_response;
+            vector<double> program_response_embedding;
+            if (runPythonProgramText(program, program_response) &&
+                runEncoder(program_response, program_response_embedding)) {
+                CWP.put(new_cluster_embedding, program, program_response_embedding);
+            }
         }
     } else {
-        //recompute centroid of cnp cluster if totally new which ti is, new centroid
-        //new method to add to existing cnp cluster    
+        // not in existing CNP cluster, create new cluster
+        QueryEmbeddingList new_query_embedding_list = {key_embedding};
+        cnp.put(key_embedding, new_query_embedding_list);
     }
 }
 
@@ -214,14 +230,14 @@ void encodeLogic(const vector<double> &input_embedding, const string &prompt, st
     ClusterCacheWithProgram::Entry cwp_res = searchCWP(input_embedding, cwp);
     if (!cwp_res.python_program.empty()) {
         runPythonProgramText(cwp_res.python_program, response);
-        // TODO: implement sanity check (optional)
+        // optional TODO: implement sanity check
     }
     else {
         //try to find in qcache
         QueryEmbeddingCacheValue qec_resp = searchQEC(input_embedding, q_cache);
         if (!qec_resp.response_text.empty()) { // hit qcache
             response = qec_resp.response_text;
-            // TODO: update message history (optional)
+            // optional TODO: update message history
         } else { // miss qcache
             response = g_llm.generate_response(prompt);
             insertQEC(q_cache, cnp, prompt, response); // handle group logic too
@@ -240,9 +256,17 @@ void start(const string &prompt, string &response)
     
     // PYTHON CODE, using bash
 
-    const vector<double> input_embedding;
+    vector<double> input_embedding;
+    if (!runEncoder(prompt, input_embedding)) {
+        response = "Failed to encode prompt";
+        return;
+    }
     encodeLogic(input_embedding, prompt, response);
 }
+
+#ifdef EMBEDLOGIC_STANDALONE
+
+string generateProgramAndCheckSanity() { return ""; }
 
 bool searchCWP(const string &prompt, string &response) {
     bool valid = false;
@@ -310,6 +334,20 @@ int main()
     }
 
     cout << "runPythonProgramText test passed. Output:\n" << response;
+
+    // Test runEncoder
+    vector<double> embedding;
+    if (!runEncoder("Hello from embed_logic", embedding)) {
+        cerr << "runEncoder failed\n";
+        return 4;
+    }
+    if (embedding.size() != 384) {
+        cerr << "runEncoder: expected dim 384, got " << embedding.size() << "\n";
+        return 5;
+    }
+    cout << "runEncoder test passed. dim=" << embedding.size()
+         << " first=" << embedding[0] << "\n";
+
     return 0;
 }
 #endif
