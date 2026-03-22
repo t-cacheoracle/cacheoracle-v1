@@ -48,6 +48,7 @@ add_library(cacheoracle_cache
     cache/cluster_cache_no_program.cpp
     cache/cluster_cache_with_program.cpp
     cache/query_embedding_cache.cpp
+    cache/cache_globals.cpp
 )
 
 target_include_directories(cacheoracle_cache PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -56,6 +57,7 @@ add_executable(cacheoracle
     main.cpp
     server.cpp
     services.cpp
+    embedlogic/embed_logic.cpp
 )
 
 target_include_directories(cacheoracle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${GENERATED_DIR})
@@ -74,6 +76,7 @@ add_executable(cacheoracle_embedlogic
 
 target_include_directories(cacheoracle_embedlogic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(cacheoracle_embedlogic PRIVATE cacheoracle_cache)
+target_compile_definitions(cacheoracle_embedlogic PRIVATE EMBEDLOGIC_STANDALONE)
 
 add_executable(cluster_cache_tests
     cache/test_cluster_caches.cpp
