@@ -4,10 +4,11 @@
 
 #include "llm.h"
 
+#include "../env_loader.h"
 #include "include/openai/openai.hpp"
 
 llm::llm() {
-    // TODO: move to env
+    loadEnv();
     std::string openai_key = std::getenv("OPENAI_API_KEY");
     if (openai_key.empty()) {
         throw std::runtime_error("OPENAI_API_KEY not set");

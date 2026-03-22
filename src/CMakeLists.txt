@@ -24,7 +24,8 @@ endif()
 
 set(GENERATED_PB_CC ${GENERATED_DIR}/cacheoracle.pb.cc)
 set(GENERATED_PB_H  ${GENERATED_DIR}/cacheoracle.pb.h)
-set(GENERATED_GRPC_CC ${GENERATED_DIR}/cacheoracle.grpc.pb.cc)
+set(GENERATED_GRPC_CC ${GENERATED_DIR}/cacheoracle.grpc.pb.cc
+        codegen/env_loader.h)
 set(GENERATED_GRPC_H  ${GENERATED_DIR}/cacheoracle.grpc.pb.h)
 
 add_custom_command(
