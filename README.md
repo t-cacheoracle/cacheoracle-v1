@@ -1,5 +1,4 @@
-<img width="1316" height="1200" alt="image" src="https://github.com/user-attachments/assets/32d3f5a5-435a-4338-9c91-abb67d7f10a8" /># cacheoracle-v1
-### A semantic cache layer that adjusts the cache as you prompt more, increasing accruacy and reduces latency + cost for LLM applications copmared to existing solutions.
+## A semantic cache layer that adjusts the cache as you prompt more, increasing accruacy and reduces latency + cost for LLM applications copmared to existing solutions.
 
 Rather than storing verbatim LLM responses (exact-match caching) or returning potentially incorrect cached results for semantically similar prompts (semantic caching), generative caching identifies structural patterns across prompt-response pairs and synthesizes a lightweight Python program that can generate correct, variation-aware responses locally without calling the LLM.
 
