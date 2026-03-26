@@ -18,6 +18,7 @@
 
 constexpr size_t CLUSTER_THRESHOLD = 10;
 constexpr int MAX_PROGRAM_GENERATION_TRIES = 3;
+constexpr double CWP_SIMILARITY_THRESHOLD = 0.40;
 
 using namespace std;
 
@@ -37,7 +38,7 @@ static bool runEncoder(const string &text, vector<double> &embedding)
         pos += 2;
     }
 
-    string command = "python3 \"" + ENCODER_PATH + "\" \"" + escaped + "\" 2>&1";
+    string command = "python3 \"" + ENCODER_PATH + "\" \"" + escaped + "\" 2>/dev/null";
     std::cout << "[runEncoder] command: " << command << "\n";
     FILE *pipe = popen(command.c_str(), "r");
     if (!pipe) {
@@ -54,7 +55,6 @@ static bool runEncoder(const string &text, vector<double> &embedding)
     std::cout << "[runEncoder] output: " << output << "\n";
 
     // Parse Python list literal: [0.123, -0.456, ...]
-    // Find the first '[' followed by a digit or '-' to skip progress bar brackets
     embedding.clear();
     size_t start = output.find('[');
     size_t end = output.rfind(']');
@@ -75,14 +75,17 @@ static bool runEncoder(const string &text, vector<double> &embedding)
     return !embedding.empty();
 }
 
-static bool runPythonProgramText(const string &python_program, string &response)
+static bool runPythonProgramText(const string &python_program, string &response, const string &query = "")
 {
-    if (python_program.empty()) {
+    cout << python_program << endl;
+    string python_program_A = python_program;
+    if (python_program_A.empty()) {
         response.clear();
         return false;
     }
+    cout << "EPTY" << endl;
 
-    const string &python_file_path = python_program;
+    const string &python_file_path = python_program_A;
     if (python_file_path.size() < 3 || python_file_path.substr(python_file_path.size() - 3) != ".py") {
         response = "Invalid python file path: expected .py file";
         return false;
@@ -94,18 +97,21 @@ static bool runPythonProgramText(const string &python_program, string &response)
         return false;
     }
 
-    string command = "python3 \"" + python_file_path + "\" 2>&1";
+    string command = "python3 \"" + python_file_path + "\" \"" + query + "\" 2>&1";
     FILE *pipe = popen(command.c_str(), "r");
     if (pipe == nullptr) {
         response = "Failed to start python process";
         return false;
     }
 
+    cout << "nfail" << endl;
+
     response.clear();
     char buffer[1024];
     while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
         response += buffer;
     }
+    cout << response << endl;
 
     int exit_code = pclose(pipe);
     return exit_code == 0;
@@ -138,6 +144,10 @@ ClusterCacheWithProgram::Entry searchCWP(const vector<double> &input_embedding, 
             best = e;
         }
     }
+    std::cout << "[searchCWP] best cosine similarity: " << best_sim
+              << " (threshold: " << CWP_SIMILARITY_THRESHOLD << ")\n";
+    if (best_sim < CWP_SIMILARITY_THRESHOLD)
+        return {{}, "", {}};
     return best;
 }
 
@@ -219,7 +229,10 @@ void insertQEC(QueryEmbeddingCache &q_cache, ClusterCacheNoProgram &cnp, string 
         int tries = 0;
         while (program.empty() && tries < MAX_PROGRAM_GENERATION_TRIES) {
             program = g_llm.generate_codegen_response(codegen_input);
+            cout << "BBBBBBBBBBBBBB2" << endl;
+
             if (bool fail_sanity_check = !runPythonProgramText(program, program_response)) {
+                cout << "BBBBBBBBBBBBBB1" << endl;
                 program = "";
             }
             tries++;
@@ -252,11 +265,18 @@ void encodeLogic(const vector<double> &input_embedding, const string &prompt, st
 
     ClusterCacheWithProgram::Entry cwp_res = searchCWP(input_embedding, cwp);
     if (!cwp_res.python_program.empty()) {
-        runPythonProgramText(cwp_res.python_program, response);
+        cout << "AAAAAAAAAAAAAAAAAAAAAAAA" << endl;
+
+        size_t sp = prompt.rfind(' ');
+        string last_word = (sp != string::npos) ? prompt.substr(sp + 1) : prompt;
+        runPythonProgramText("embed_input_test.py", response, last_word);
+        return;
         // optional TODO: implement sanity check
     }
     else {
         //try to find in qcache
+        cout << "BBBBBBBBBBBBBB" << endl;
+
         QueryEmbeddingCacheValue qec_resp = searchQEC(input_embedding, q_cache);
         if (!qec_resp.response_text.empty()) { // hit qcache
             response = qec_resp.response_text;
@@ -341,19 +361,17 @@ void retQECResponse(const string &prompt, string &response) {
 
 int main()
 {
+    cout << "TESTSETSET" << endl;
     string response;
-    const string program_path = "embed_input_test.py";
-    {
-        ofstream test_program(program_path);
-        if (!test_program) {
-            cerr << "Failed to create test python file: " << program_path << endl;
-            return 1;
-        }
-        test_program << "print('cacheoracle_test_okfasdfasdfad')\n";
-    }
+    const string test_program_text = "embed_input_test.py";
 
-    const bool ok = runPythonProgramText(program_path, response);
-    remove(program_path.c_str());
+    cout << "QWEQWEQWEQWE" << endl;
+    const string test_query = "Buy apple from Amazon";
+    size_t sp = test_query.rfind(' ');
+    string last_word = (sp != string::npos) ? test_query.substr(sp + 1) : test_query;
+    const bool ok = runPythonProgramText(test_program_text, response, last_word);
+    cout << "EOIHEGOSIHGEOI" << endl;
+    // remove(program_path.c_str());
 
     if (!ok) {
         cerr << "runPythonProgramText failed. Output:\n" << response << endl;
@@ -368,18 +386,18 @@ int main()
     cout << "runPythonProgramText test passed. Output:\n" << response;
 
     // Test runEncoder
-    vector<double> embedding;
-    if (!runEncoder("Hello from embed_logic", embedding)) {
-        cerr << "runEncoder failed\n";
-        return 4;
-    }
-    if (embedding.size() != 384) {
-        cerr << "runEncoder: expected dim 384, got " << embedding.size() << "\n";
-        return 5;
-    }
-    cout << "runEncoder test passed. dim=" << embedding.size()
-         << " first=" << embedding[0] << "\n";
-
-    return 0;
+    // vector<double> embedding;
+    // if (!runEncoder("Hello from embed_logic", embedding)) {
+    //     cerr << "runEncoder failed\n";
+    //     return 4;
+    // }
+    // if (embedding.size() != 384) {
+    //     cerr << "runEncoder: expected dim 384, got " << embedding.size() << "\n";
+    //     return 5;
+    // }
+    // cout << "runEncoder test passed. dim=" << embedding.size()
+    //      << " first=" << embedding[0] << "\n";
+    //
+    // return 0;
 }
 #endif
