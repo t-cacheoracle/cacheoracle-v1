@@ -30,12 +30,10 @@ Once a cluster with no programs reaches a threshold number, it well then call in
  
  make -j4
 
- Run server
- 
-./cacheoracle 0.0.0.0:50051
+### Run server
+  ./cacheoracle 0.0.0.0:50051
 
-Run gRPC test client
-
-./build/cacheoracle_client localhost:50051 "hello grpc"
+### Run gRPC test client
+ ./build/cacheoracle_client localhost:50051 "hello grpc"
 
 
