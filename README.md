@@ -22,7 +22,15 @@ Once a cluster with no programs reaches a threshold number, it well then call in
  The current implementation is mainly targeted for repeated questioning. Eg: Customer service questions, web navigation and chatbot agents. More complex agents such as coding agents and tool calling might not work well with the semantic cache model of the standalone prompts/responses cache. Although this can be supported by removing said layer, and adjusting the code generator to support tools calls within the generated program.
 
  ## How to build
- 
+ cmake -S src -B build && cmake --build build -- -j 4
+ cd build
+ cmake ../src -DgRPC_DIR=/opt/homebrew/Cellar/grpc/1.78.1_3/lib/cmake/grpc -DProtobuf_DIR=/opt/homebrew/Cellar/protobuf/34.1/lib/cmake/protobuf
+ make -j4
 
+ Run server
+./cacheoracle 0.0.0.0:50051
+
+Run gRPC test client
+./build/cacheoracle_client localhost:50051 "hello grpc"
 
 
