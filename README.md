@@ -37,3 +37,6 @@ Once a cluster with no programs reaches a threshold number, it well then call in
  ./build/cacheoracle_client localhost:50051 "hello grpc"
 
 
+## References
+https://www.microsoft.com/en-us/research/wp-content/uploads/2025/09/GenCache_NeurIPS25.pdf
+
