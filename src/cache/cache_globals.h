@@ -9,4 +9,6 @@ extern ClusterCacheWithProgram CWP;
 extern ClusterCacheNoProgram CNP;
 extern QueryEmbeddingCache QEC;
 
+void initGlobalCaches();
+
 #endif // CACHE_GLOBALS_H

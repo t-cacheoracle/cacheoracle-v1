@@ -2,8 +2,8 @@
 
 QueryEmbeddingCache::QueryEmbeddingCache(std::size_t capacity)
     : cap(capacity), current_size(0) {
-    left = new Node({}, "", {});
-    right = new Node({}, "", {});
+    left = new Node({}, "", "", {});
+    right = new Node({}, "", "", {});
     left->next = right;
     right->prev = left;
 }
@@ -33,6 +33,7 @@ void QueryEmbeddingCache::insert(Node* node) {
 }
 
 void QueryEmbeddingCache::put(const QueryEmbedding& query_embedding,
+                              const std::string& question_text,
                               const std::string& response_text,
                               const ResponseEmbedding& response_embedding) {
     Node* existing = nullptr;
@@ -45,6 +46,7 @@ void QueryEmbeddingCache::put(const QueryEmbedding& query_embedding,
 
     if (existing) {
         remove(existing);
+        existing->value.question_text = question_text;
         existing->value.response_text = response_text;
         existing->value.response_embedding = response_embedding;
         insert(existing);
@@ -62,7 +64,7 @@ void QueryEmbeddingCache::put(const QueryEmbedding& query_embedding,
         current_size--;
     }
 
-    Node* new_node = new Node(query_embedding, response_text, response_embedding);
+    Node* new_node = new Node(query_embedding, question_text, response_text, response_embedding);
     insert(new_node);
     current_size++;
 }
@@ -79,6 +81,17 @@ bool QueryEmbeddingCache::get(const QueryEmbedding& query_embedding,
     }
 
     return false;
+}
+
+void QueryEmbeddingCache::erase(const QueryEmbedding& query_embedding) {
+    for (Node* node = left->next; node != right; node = node->next) {
+        if (node->key == query_embedding) {
+            remove(node);
+            delete node;
+            --current_size;
+            return;
+        }
+    }
 }
 
 std::size_t QueryEmbeddingCache::size() const {

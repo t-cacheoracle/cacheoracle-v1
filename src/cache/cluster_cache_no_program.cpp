@@ -92,6 +92,14 @@ std::vector<ClusterCacheNoProgram::Entry> ClusterCacheNoProgram::getEntries() co
     return entries;
 }
 
+void ClusterCacheNoProgram::erase(const ClusterEmbedding& cluster_embedding) {
+    Node* node = findNode(cluster_embedding);
+    if (node == nullptr) return;
+    remove(node);
+    delete node;
+    --size_;
+}
+
 std::size_t ClusterCacheNoProgram::size() const {
     return size_;
 }

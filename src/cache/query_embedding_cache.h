@@ -9,6 +9,7 @@ using QueryEmbedding = std::vector<double>;
 using ResponseEmbedding = std::vector<double>;
 
 struct QueryEmbeddingCacheValue {
+	std::string question_text;
 	std::string response_text;
 	ResponseEmbedding response_embedding;
 };
@@ -22,10 +23,11 @@ private:
 		Node* next;
 
 		Node(const QueryEmbedding& query_embedding,
+			 const std::string& question_text,
 			 const std::string& response_text,
 			 const ResponseEmbedding& response_embedding)
 			: key(query_embedding),
-			  value{response_text, response_embedding},
+			  value{question_text, response_text, response_embedding},
 			  prev(nullptr),
 			  next(nullptr) {}
 	};
@@ -43,10 +45,12 @@ public:
 	~QueryEmbeddingCache();
 
 	void put(const QueryEmbedding& query_embedding,
+			 const std::string& question_text,
 			 const std::string& response_text,
 			 const ResponseEmbedding& response_embedding);
 
 	bool get(const QueryEmbedding& query_embedding, QueryEmbeddingCacheValue& out_value);
+	void erase(const QueryEmbedding& query_embedding);
 
 	// Return a copy of all entries as (key, value) pairs in LRU order (most-recent last).
 	std::vector<std::pair<QueryEmbedding, QueryEmbeddingCacheValue>> getEntries() const;

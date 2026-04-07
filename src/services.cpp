@@ -9,8 +9,8 @@ grpc::Status CodegenServiceImpl::GenerateResponse(grpc::ServerContext* /*context
                                                 ::cacheoracle::Response* response) {
     const std::string &prompt = request->prompt();
     std::string out;
-    //start(prompt, out);
-    response->set_response("Hi there!");
+    start(prompt, out);
+    response->set_response(out);
     return grpc::Status::OK;
 }
 

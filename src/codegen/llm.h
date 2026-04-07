@@ -13,9 +13,13 @@ class llm {
 public:
     llm();
     ~llm();
-    std::string generate_response(nlohmann::json& message_history);
+    std::string generate_response(const std::string& user_query);
+    std::string generate_codegen_response(const std::string& user_query);
+
 };
 
 
+
+extern llm g_llm;
 
 #endif //LLM_H
